@@ -1,8 +1,5 @@
 # Car Rental System: Architecture
 
-Last updated: 2026-11-10
-
-This document describes the design in force. It is written from the decisions recorded in [PROJECT_NOTES.md](PROJECT_NOTES.md), which keeps the market analysis and the history of how each decision was reached. Where the two differ, this document applies.
 
 ## Contents
 
