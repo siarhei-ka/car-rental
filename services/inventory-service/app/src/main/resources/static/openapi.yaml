@@ -1,0 +1,469 @@
+openapi: 3.1.0
+info:
+  title: Inventory Service
+  version: 0.1.0
+  description: |
+    Owns stock, holds, transfers and registered returns, and enforces the capacity rule:
+    at every moment, the cars in use at a location must not exceed its stock.
+
+    Every request names its country in the `X-Country` header. A country is a tenant.
+
+    Every response carries an `X-Correlation-Id` header. A caller may send its own.
+servers:
+  - url: /
+tags:
+  - name: holds
+    description: Holds, used by the reservation service
+  - name: availability
+    description: Availability, used by the search service
+  - name: admin
+    description: Administration of stock and transfers
+
+paths:
+  /api/v1/holds/{holdId}:
+    parameters:
+      - $ref: "#/components/parameters/Country"
+      - $ref: "#/components/parameters/HoldId"
+    put:
+      tags: [holds]
+      summary: Keep one car for a reservation
+      description: |
+        The hold ID is the reservation ID. Repeating the same request returns the existing hold
+        with status 200. A new hold is provisional and is released automatically if it is not
+        confirmed in time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HoldRequest"
+      responses:
+        "201":
+          description: The hold was created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hold"
+        "200":
+          description: The same request had already created this hold
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hold"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [holds]
+      summary: Release a hold after a cancellation or a no-show
+      description: Releasing a hold that does not exist is harmless.
+      responses:
+        "204":
+          description: The hold no longer exists
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/holds/{holdId}/confirm:
+    parameters:
+      - $ref: "#/components/parameters/Country"
+      - $ref: "#/components/parameters/HoldId"
+    post:
+      tags: [holds]
+      summary: Confirm a hold once the reservation is stored
+      responses:
+        "200":
+          description: The hold is confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hold"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/holds/{holdId}/return:
+    parameters:
+      - $ref: "#/components/parameters/Country"
+      - $ref: "#/components/parameters/HoldId"
+    post:
+      tags: [holds]
+      summary: Register that the car was returned
+      description: For a one-way rental the car joins the stock of the return location.
+      responses:
+        "204":
+          description: The return is registered
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/availability:
+    get:
+      tags: [availability]
+      summary: Cars that could still be held at a location for a rental
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - name: locationId
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/Id"
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: days
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 366
+        - name: returnLocationId
+          in: query
+          required: false
+          description: Defaults to the pick-up location.
+          schema:
+            $ref: "#/components/schemas/Id"
+      responses:
+        "200":
+          description: One entry per car type and class stocked at the location
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Availability"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/admin/stock:
+    get:
+      tags: [admin]
+      summary: List stock
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - name: locationId
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Id"
+      responses:
+        "200":
+          description: Stock rows, ordered by location, type and class
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Stock"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/admin/stock/{locationId}/{carType}/{carClass}:
+    put:
+      tags: [admin]
+      summary: Set the number of cars of a type and class at a location
+      description: A reduction below the cars that holds and transfers rely on is rejected.
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Id"
+        - name: carType
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Code"
+        - name: carClass
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Code"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cars]
+              properties:
+                cars:
+                  type: integer
+                  minimum: 0
+                  maximum: 100000
+      responses:
+        "200":
+          description: The stock is set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stock"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/admin/transfers:
+    get:
+      tags: [admin]
+      summary: List transfers whose arrival has not been registered yet
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - name: locationId
+          in: query
+          required: false
+          description: Only transfers that leave this location
+          schema:
+            $ref: "#/components/schemas/Id"
+      responses:
+        "200":
+          description: Transfers, ordered by departure
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/admin/transfers/{transferId}:
+    put:
+      tags: [admin]
+      summary: Send cars to another location of the same country
+      description: |
+        The cars leave the source stock at the departure. They join the target stock only when
+        their arrival is registered. Repeating the same request returns the existing transfer.
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - $ref: "#/components/parameters/TransferId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequest"
+      responses:
+        "201":
+          description: The transfer was created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "200":
+          description: The same request had already created this transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/admin/transfers/{transferId}/arrival:
+    post:
+      tags: [admin]
+      summary: Register that the cars of a transfer arrived
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - $ref: "#/components/parameters/TransferId"
+      responses:
+        "204":
+          description: The cars joined the target stock
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  parameters:
+    Country:
+      name: X-Country
+      in: header
+      required: true
+      description: The country of the request, as two lowercase letters
+      schema:
+        type: string
+        pattern: "^[a-z]{2}$"
+    HoldId:
+      name: holdId
+      in: path
+      required: true
+      description: The ID of the reservation the hold belongs to
+      schema:
+        $ref: "#/components/schemas/Id"
+    TransferId:
+      name: transferId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Id"
+
+  responses:
+    BadRequest:
+      description: The request is invalid, or the country is missing or not served
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: The hold or transfer does not exist
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Conflict:
+      description: |
+        `/problems/no-car-available`: no car is free for the whole period.
+        `/problems/stock-in-use`: the stock cannot be reduced.
+        `/problems/conflicting-request`: the ID is already used for a different request.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    Id:
+      type: string
+      pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    Code:
+      type: string
+      pattern: "^[A-Z][A-Z0-9_]{0,31}$"
+      examples: [SEDAN, SUV, VAN, ECONOMY]
+    HoldRequest:
+      type: object
+      required: [locationId, carType, carClass, start, days, returnLocationId]
+      properties:
+        locationId:
+          $ref: "#/components/schemas/Id"
+        carType:
+          $ref: "#/components/schemas/Code"
+        carClass:
+          $ref: "#/components/schemas/Code"
+        start:
+          type: string
+          format: date-time
+        days:
+          type: integer
+          minimum: 1
+          maximum: 366
+        returnLocationId:
+          $ref: "#/components/schemas/Id"
+    Hold:
+      type: object
+      required: [id, locationId, carType, carClass, start, days, end, returnLocationId, oneWay, status]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        locationId:
+          $ref: "#/components/schemas/Id"
+        carType:
+          $ref: "#/components/schemas/Code"
+        carClass:
+          $ref: "#/components/schemas/Code"
+        start:
+          type: string
+          format: date-time
+        days:
+          type: integer
+        end:
+          type: string
+          format: date-time
+          description: The first moment that is no longer part of the rental
+        returnLocationId:
+          $ref: "#/components/schemas/Id"
+        oneWay:
+          type: boolean
+        status:
+          type: string
+          enum: [PROVISIONAL, CONFIRMED]
+    Availability:
+      type: object
+      required: [carType, carClass, availableCars]
+      properties:
+        carType:
+          $ref: "#/components/schemas/Code"
+        carClass:
+          $ref: "#/components/schemas/Code"
+        availableCars:
+          type: integer
+          minimum: 0
+    Stock:
+      type: object
+      required: [locationId, carType, carClass, cars]
+      properties:
+        locationId:
+          $ref: "#/components/schemas/Id"
+        carType:
+          $ref: "#/components/schemas/Code"
+        carClass:
+          $ref: "#/components/schemas/Code"
+        cars:
+          type: integer
+          minimum: 0
+    TransferRequest:
+      type: object
+      required: [locationId, carType, carClass, cars, departure, targetLocationId, plannedArrival]
+      properties:
+        locationId:
+          $ref: "#/components/schemas/Id"
+        carType:
+          $ref: "#/components/schemas/Code"
+        carClass:
+          $ref: "#/components/schemas/Code"
+        cars:
+          type: integer
+          minimum: 1
+          maximum: 1000
+        departure:
+          type: string
+          format: date-time
+        targetLocationId:
+          $ref: "#/components/schemas/Id"
+        plannedArrival:
+          type: string
+          format: date-time
+    Transfer:
+      type: object
+      required: [id, locationId, carType, carClass, cars, departure, targetLocationId, plannedArrival]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        locationId:
+          $ref: "#/components/schemas/Id"
+        carType:
+          $ref: "#/components/schemas/Code"
+        carClass:
+          $ref: "#/components/schemas/Code"
+        cars:
+          type: integer
+        departure:
+          type: string
+          format: date-time
+        targetLocationId:
+          $ref: "#/components/schemas/Id"
+        plannedArrival:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      description: Problem Details (RFC 9457)
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string

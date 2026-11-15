@@ -1,0 +1,331 @@
+openapi: 3.1.0
+info:
+  title: Discount Service
+  version: 0.1.0
+  description: |
+    The discount rules of each country, and the discount of a basket. A rule has one or more
+    conditions, all of which must hold, and one effect: a percentage or a fixed amount off the
+    extras or the total. A rule applies on the days of its validity period while it is switched on.
+    Rules are never deleted, only switched off. Discounts do not add up: when several rules apply,
+    only the one that saves the customer the most is used.
+
+    Every request names its country in the `X-Country` header and needs an access token. The admin
+    paths are for administrators of the country. The evaluation is for other services, the pricing
+    service in practice, with the role `service`.
+
+    Amounts are decimal strings with as many fraction digits as the currency has minor units, in
+    the currency of the country.
+
+    Every response carries an `X-Correlation-Id` header. A caller may send its own.
+servers:
+  - url: /
+security:
+  - bearer: []
+tags:
+  - name: admin
+    description: Discount rules, for administrators of the country
+  - name: evaluation
+    description: The discount of a basket, for other services
+
+paths:
+  /api/v1/admin/discount-rules:
+    get:
+      tags: [admin]
+      summary: List the rules of the country
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      responses:
+        "200":
+          description: All rules, also those switched off, ordered by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DiscountRule"
+        "400":
+          $ref: "#/components/responses/Problem"
+    post:
+      tags: [admin]
+      summary: Add a rule
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscountRuleRequest"
+      responses:
+        "201":
+          description: The new rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscountRule"
+        "400":
+          $ref: "#/components/responses/Problem"
+
+  /api/v1/admin/discount-rules/{id}:
+    put:
+      tags: [admin]
+      summary: Change a rule, or switch it off
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscountRuleRequest"
+      responses:
+        "200":
+          description: The changed rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscountRule"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "404":
+          description: The country has no such rule (`/problems/discount-rule-not-found`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /api/v1/discount-evaluations:
+    post:
+      tags: [evaluation]
+      summary: Find the discount of a basket
+      description: |
+        Returns the rule that saves the customer the most on the given day, or none. The caller
+        sends the basket as it calculated it before any discount.
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Basket"
+      responses:
+        "200":
+          description: The discount, or `null` when no rule applies
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [discount]
+                properties:
+                  discount:
+                    oneOf:
+                      - $ref: "#/components/schemas/Discount"
+                      - type: "null"
+        "400":
+          $ref: "#/components/responses/Problem"
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Country:
+      name: X-Country
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-z]{2}$"
+        examples: ["pl"]
+  responses:
+    Problem:
+      description: >-
+        An invalid request, rule or basket (`/problems/invalid-discount`,
+        `/problems/unknown-country`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Code:
+      type: string
+      pattern: "^[A-Z][A-Z0-9_]{0,31}$"
+      examples: ["CHILD_SEAT"]
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          examples: ["25.00"]
+        currency:
+          type: string
+          description: ISO 4217 code
+          examples: ["PLN"]
+    Target:
+      type: string
+      enum: [EXTRAS, TOTAL]
+      description: Whether the discount is taken off the sum of the extras or the total
+    EffectKind:
+      type: string
+      enum: [PERCENT_OFF, AMOUNT_OFF]
+    Conditions:
+      type: object
+      description: At least one condition. The rule applies only when all of them hold
+      properties:
+        minExtras:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 100
+          description: The least number of extras, counted with their quantities
+        requiredExtras:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/Code"
+          description: Extras that must all be in the basket
+        minDays:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 365
+          description: The least number of rental days
+    Effect:
+      type: object
+      required: [kind, target]
+      properties:
+        kind:
+          $ref: "#/components/schemas/EffectKind"
+        percent:
+          type: [string, "null"]
+          description: For PERCENT_OFF, more than 0 and at most 100, with at most two decimals
+          examples: ["10"]
+        amount:
+          oneOf:
+            - $ref: "#/components/schemas/Money"
+            - type: "null"
+          description: For AMOUNT_OFF. It never takes off more than the extras or the total
+        target:
+          $ref: "#/components/schemas/Target"
+    EffectRequest:
+      type: object
+      required: [kind, target]
+      properties:
+        kind:
+          $ref: "#/components/schemas/EffectKind"
+        percent:
+          type: [string, "null"]
+          description: For PERCENT_OFF
+          examples: ["10"]
+        amount:
+          type: [string, "null"]
+          description: For AMOUNT_OFF, more than 0, in the currency of the country
+          examples: ["20.00"]
+        target:
+          $ref: "#/components/schemas/Target"
+    DiscountRule:
+      type: object
+      required: [id, name, conditions, effect, validFrom, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          examples: ["3 or more extras: 10% off the extras"]
+        conditions:
+          $ref: "#/components/schemas/Conditions"
+        effect:
+          $ref: "#/components/schemas/Effect"
+        validFrom:
+          type: string
+          format: date
+          description: The first day the rule applies
+        validTo:
+          type: [string, "null"]
+          format: date
+          description: The last day the rule applies, or null for no end
+        active:
+          type: boolean
+          description: Whether the rule is switched on
+    DiscountRuleRequest:
+      type: object
+      required: [name, conditions, effect, validFrom, active]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        conditions:
+          $ref: "#/components/schemas/Conditions"
+        effect:
+          $ref: "#/components/schemas/EffectRequest"
+        validFrom:
+          type: string
+          format: date
+        validTo:
+          type: [string, "null"]
+          format: date
+        active:
+          type: boolean
+    Basket:
+      type: object
+      required: [date, days, total]
+      properties:
+        date:
+          type: string
+          format: date
+          description: The day the price is calculated, in the time zone of the pick-up location
+        days:
+          type: integer
+          minimum: 1
+        total:
+          $ref: "#/components/schemas/Money"
+        extras:
+          type: array
+          items:
+            type: object
+            required: [code, quantity, price]
+            properties:
+              code:
+                $ref: "#/components/schemas/Code"
+              quantity:
+                type: integer
+                minimum: 1
+              price:
+                $ref: "#/components/schemas/Money"
+                description: The price of the line, for the whole rental and the quantity
+    Discount:
+      type: object
+      required: [ruleId, name, target, amount]
+      properties:
+        ruleId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        target:
+          $ref: "#/components/schemas/Target"
+        amount:
+          $ref: "#/components/schemas/Money"
+          description: The amount saved
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

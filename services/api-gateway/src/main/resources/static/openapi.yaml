@@ -1,0 +1,100 @@
+openapi: 3.1.0
+info:
+  title: API Gateway
+  version: 0.1.0
+  description: |
+    The entry point of one UI. The same gateway runs once for the customer UI and once for the
+    admin UI. Besides the endpoints below, it passes the API paths of its UI on to the services,
+    with the access token of the signed-in user.
+
+    Sign-in follows the backend-for-frontend pattern:
+
+    - The UI starts the sign-in by opening `/oauth2/authorization/keycloak` in the browser.
+      Keycloak returns the browser to `/login/oauth2/code/keycloak`, and the gateway then opens the
+      start page of the UI. A failed sign-in opens `/?signInFailed`.
+    - The browser holds only an HttpOnly session cookie. Tokens stay in the gateway.
+    - Requests that change data must send the value of the CSRF cookie in the `X-XSRF-TOKEN`
+      header. The cookie is `XSRF-TOKEN` for the customer UI and `ADMIN-XSRF-TOKEN` for the admin
+      UI. `GET /api/v1/session` sets it.
+    - A request that is not allowed is answered with 401 when nobody is signed in, and 403 when the
+      user may not use the function, never with a redirect.
+servers:
+  - url: /
+tags:
+  - name: session
+    description: Who is signed in, and signing out
+
+paths:
+  /api/v1/session:
+    get:
+      tags: [session]
+      summary: Who is signed in
+      description: Also sets the CSRF cookie.
+      responses:
+        "200":
+          description: The current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /logout:
+    post:
+      tags: [session]
+      summary: Sign out
+      description: |
+        Ends the gateway session. The answer names the Keycloak address that ends the Keycloak
+        session too and then returns to the UI. The UI opens it in the browser. Like every request
+        that changes data, it needs the `X-XSRF-TOKEN` header.
+      responses:
+        "200":
+          description: Signed out of the gateway
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [redirectTo]
+                properties:
+                  redirectTo:
+                    type: string
+                    description: The address to open next
+        "403":
+          description: The CSRF token is missing or wrong
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+components:
+  schemas:
+    Session:
+      type: object
+      required: [signedIn, roles]
+      properties:
+        signedIn:
+          type: boolean
+        name:
+          type: [string, "null"]
+          description: The name to show, when signed in
+        roles:
+          type: array
+          description: The system's roles of the user
+          items:
+            type: string
+            enum: [SUPER_ADMIN, COUNTRY_ADMIN, CUSTOMER]
+        country:
+          type: [string, "null"]
+          description: The country of a country administrator
+          pattern: "^[a-z]{2}$"
+    Problem:
+      type: object
+      description: Problem Details (RFC 9457)
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

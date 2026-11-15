@@ -1,0 +1,30 @@
+# The HTTPS front of the system: it serves the certificate of infra/https/certs and passes every
+# request on over plain HTTP, telling the services that the browser used HTTPS.
+{
+	admin off
+	auto_https off
+	# A browser that opens an IP address sends no server name; it gets the same certificate.
+	default_sni {$PUBLIC_HOST}
+}
+
+(local_tls) {
+	tls /certs/server.crt /certs/server.key
+}
+
+# The customer UI
+:8443 {
+	import local_tls
+	reverse_proxy ui:8080
+}
+
+# The admin UI
+:9443 {
+	import local_tls
+	reverse_proxy admin-ui:8080
+}
+
+# Keycloak, for sign-in
+:8543 {
+	import local_tls
+	reverse_proxy keycloak:8080
+}

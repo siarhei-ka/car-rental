@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 44 640 264">
+  <defs>
+    <linearGradient id="paint-sedan-comfort" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ec2ef"/><stop offset="0.45" stop-color="#3b7dc4"/><stop offset="1" stop-color="#1f4f86"/></linearGradient>
+    <linearGradient id="glass-sedan-comfort" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b7187"/><stop offset="0.55" stop-color="#26323f"/><stop offset="1" stop-color="#161d26"/></linearGradient>
+    <radialGradient id="rim-sedan-comfort"><stop offset="0" stop-color="#3a3f47"/><stop offset="1" stop-color="#8a929d"/></radialGradient>
+    <radialGradient id="shadow-sedan-comfort"><stop offset="0" stop-color="#0b1220" stop-opacity="0.35"/><stop offset="1" stop-color="#0b1220" stop-opacity="0"/></radialGradient>
+    <clipPath id="glass-clip-sedan-comfort"><path d="M188 164 C212 148 240 126 266 121 L386 119 C408 121 432 142 452 160 Z"/></clipPath>
+  </defs>
+  <ellipse cx="324" cy="283" rx="300" ry="14" fill="url(#shadow-sedan-comfort)"/>
+  <path d="M97 242 A53 53 0 0 1 203 242 Z" fill="#14171b"/>
+  <path d="M437 242 A53 53 0 0 1 543 242 Z" fill="#14171b"/>
+  <path d="M60 240 L50 206 Q48 184 72 178 L168 166 C196 150 230 118 262 112 L392 110 C420 112 452 146 474 160 L566 172 Q594 178 598 202 L600 226 Q600 240 588 240 L544 240 A54 54 0 0 0 436 240 L204 240 A54 54 0 0 0 96 240 Z" fill="url(#paint-sedan-comfort)"/>
+  <rect x="204" y="228" width="232" height="12" fill="#1f4f86" opacity="0.55"/>
+  <path d="M188 164 C212 148 240 126 266 121 L386 119 C408 121 432 142 452 160 Z" fill="url(#glass-sedan-comfort)"/>
+  <rect x="316" y="60" width="12" height="110" fill="#1f4f86" clip-path="url(#glass-clip-sedan-comfort)"/>
+  <path clip-path="url(#glass-clip-sedan-comfort)" d="M300 116 L330 116 L282 166 L270 166 Z" fill="#ffffff" opacity="0.10"/>
+  <path d="M188 164 C212 148 240 126 266 121 L386 119 C408 121 432 142 452 160 Z" fill="none" stroke="#2b3036" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M74 186 L470 172 L590 186" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2.5"/>
+  <path d="M328 166 L332 236" fill="none" stroke="#1f4f86" stroke-opacity="0.8" stroke-width="2"/>
+  <path d="M454 162 Q446 200 444 236" fill="none" stroke="#1f4f86" stroke-opacity="0.8" stroke-width="2"/>
+  <path d="M206 168 Q210 200 210 236" fill="none" stroke="#1f4f86" stroke-opacity="0.8" stroke-width="2"/>
+  <rect x="286" y="182" width="26" height="6" rx="3" fill="#1f4f86"/>
+  <rect x="408" y="178" width="26" height="6" rx="3" fill="#1f4f86"/>
+  <path d="M572 184 Q592 186 596 198 L570 196 Z" fill="#fff4d6" stroke="#9aa3ad" stroke-width="1.5"/>
+  <path d="M52 190 L74 186 L74 198 L54 200 Z" fill="#d22f3c"/>
+  <g>
+    <circle cx="150" cy="240" r="43" fill="#1b1d21"/>
+    <circle cx="150" cy="240" r="40" fill="none" stroke="#2c3036" stroke-width="2"/>
+    <circle cx="150" cy="240" r="28" fill="url(#rim-sedan-comfort)"/>
+    <rect x="146.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(0.0 150 240)"/>
+    <rect x="146.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(72.0 150 240)"/>
+    <rect x="146.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(144.0 150 240)"/>
+    <rect x="146.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(216.0 150 240)"/>
+    <rect x="146.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(288.0 150 240)"/>
+    <circle cx="150" cy="240" r="6" fill="#59616c"/>
+    <circle cx="150" cy="240" r="2.5" fill="#d0d5dc"/>
+  </g>
+  <g>
+    <circle cx="490" cy="240" r="43" fill="#1b1d21"/>
+    <circle cx="490" cy="240" r="40" fill="none" stroke="#2c3036" stroke-width="2"/>
+    <circle cx="490" cy="240" r="28" fill="url(#rim-sedan-comfort)"/>
+    <rect x="486.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(0.0 490 240)"/>
+    <rect x="486.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(72.0 490 240)"/>
+    <rect x="486.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(144.0 490 240)"/>
+    <rect x="486.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(216.0 490 240)"/>
+    <rect x="486.5" y="215" width="7" height="22" rx="3.5" fill="#e4e8ee" transform="rotate(288.0 490 240)"/>
+    <circle cx="490" cy="240" r="6" fill="#59616c"/>
+    <circle cx="490" cy="240" r="2.5" fill="#d0d5dc"/>
+  </g>
+</svg>

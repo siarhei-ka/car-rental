@@ -1,0 +1,83 @@
+# Smaller memory limits and longer start-up times for running the whole system on a CI runner:
+#   docker compose -f compose.yaml -f compose.ci.yaml up -d --build --wait
+# Each Java service gets a small heap and the serial garbage collector, which is enough for the
+# end-to-end tests. Keycloak and Kafka get smaller heaps too.
+x-small-jvm: &small-jvm
+  JAVA_TOOL_OPTIONS: -Xmx160m -Xss512k -XX:+UseSerialGC -XX:ReservedCodeCacheSize=48m -XX:MaxMetaspaceSize=160m
+
+# On a runner with two CPUs every Java service starts at the same time and can take two minutes,
+# longer than the health check of its image allows. CI gives them up to five minutes.
+x-slow-start: &slow-start
+  test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness > /dev/null || exit 1"]
+  interval: 10s
+  timeout: 5s
+  start_period: 300s
+  retries: 30
+
+services:
+  gateway:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  admin-gateway:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  cache-updater:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  location-info-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  car-type-info-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  administration-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  search-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  customer-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  pricing-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  ancillary-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  discount-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  insurance-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  insurance-provider-mock:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  inventory-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  reservation-service:
+    environment:
+      <<: *small-jvm
+    healthcheck: *slow-start
+  keycloak:
+    environment:
+      JAVA_OPTS_KC_HEAP: -Xms64m -Xmx400m
+  kafka:
+    environment:
+      KAFKA_HEAP_OPTS: -Xmx256m -Xms128m

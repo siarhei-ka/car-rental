@@ -1,0 +1,154 @@
+openapi: 3.1.0
+info:
+  title: Insurance Service
+  version: 0.1.0
+  description: |
+    Insurance options, the same in every country, and their prices per day. Every price comes from
+    the insurance provider, in the currency of the rental country. The provider learns only the
+    option, the driver's age, the licence country and the rental country, never the name or the
+    date of birth. If the provider does not answer in time, the answer is 503 and no price is
+    invented.
+
+    Every request names the rental country in the `X-Country` header and needs an access token.
+    The options with their base prices are open to every valid token, including the customer
+    gateway's token for a visitor. The price for a driver is only for other services.
+
+    Amounts are decimal strings with as many fraction digits as the currency has minor units.
+
+    Every response carries an `X-Correlation-Id` header. A caller may send its own.
+servers:
+  - url: /
+security:
+  - bearer: []
+tags:
+  - name: insurance
+    description: Insurance options and their prices
+
+paths:
+  /api/v1/insurance-options:
+    get:
+      tags: [insurance]
+      summary: List the insurance options with their base price per day
+      description: The base price is what a visitor sees as a "from" price before signing in.
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      responses:
+        "200":
+          description: The options in the order to show them
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PricedOption"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/v1/insurance-quotes:
+    post:
+      tags: [insurance]
+      summary: Price an option for a driver
+      description: Only for other services, which know the driver. The price is per day.
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [option, driverAge, licenceCountry]
+              properties:
+                option:
+                  type: string
+                  examples: ["BASIC"]
+                driverAge:
+                  type: integer
+                  minimum: 18
+                  maximum: 120
+                  description: The age of the driver on the start of the rental
+                licenceCountry:
+                  type: string
+                  pattern: "^[a-z]{2}$"
+      responses:
+        "200":
+          description: The option with its price per day for this driver
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PricedOption"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Country:
+      name: X-Country
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-z]{2}$"
+        examples: ["pl"]
+  responses:
+    Problem:
+      description: >-
+        An invalid request (`/problems/unknown-insurance-option`,
+        `/problems/invalid-insurance-request`, `/problems/unknown-country`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Unavailable:
+      description: The insurance provider did not answer in time (`/problems/insurance-unavailable`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          examples: ["10.00"]
+        currency:
+          type: string
+          examples: ["PLN"]
+    PricedOption:
+      type: object
+      required: [code, name, description, preselected, pricePerDay]
+      properties:
+        code:
+          type: string
+          examples: ["BASIC"]
+        name:
+          type: string
+        description:
+          type: string
+        preselected:
+          type: boolean
+          description: Whether this option is chosen until the customer picks another one
+        pricePerDay:
+          $ref: "#/components/schemas/Money"
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

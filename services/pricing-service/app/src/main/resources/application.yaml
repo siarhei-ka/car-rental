@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: pricing-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/pricing}
+    username: ${DB_USER:pricing}
+    password: ${DB_PASSWORD}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+pricing:
+  # Where the list of countries and their currencies is loaded from at startup. Each country is a
+  # tenant with its own schema.
+  administration-url: ${ADMINISTRATION_URL:http://localhost:8083}
+  # Load example data for each country.
+  seed-data: ${PRICING_SEED_DATA:true}
+  # The services a quote depends on. Each call has this time limit (NFR-9).
+  location-info-url: ${LOCATION_INFO_URL:http://localhost:8084}
+  customer-url: ${CUSTOMER_URL:http://localhost:8089}
+  insurance-url: ${INSURANCE_URL:http://localhost:8093}
+  ancillary-url: ${ANCILLARY_URL:http://localhost:8092}
+  discount-url: ${DISCOUNT_URL:http://localhost:8095}
+  timeout: PT2S
+  # The same limit as a reservation.
+  max-days: ${PRICING_MAX_DAYS:30}
+  # The youngest a driver may be on the start of the rental.
+  minimum-driver-age: ${PRICING_MINIMUM_DRIVER_AGE:21}
+
+car-rental:
+  # Events go through the outbox table, in the transaction of the change they describe.
+  outbox:
+    enabled: true
+    table: public.outbox

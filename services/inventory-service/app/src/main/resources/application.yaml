@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: inventory-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/inventory}
+    username: ${DB_USER:inventory}
+    password: ${DB_PASSWORD}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+inventory:
+  # Countries to serve from the start. Usually empty: countries come from the existing schemas
+  # and from the administration service. Each country is a tenant with its own schema.
+  countries: ${INVENTORY_COUNTRIES:}
+  # Where the list of countries is loaded from at startup.
+  administration-url: ${ADMINISTRATION_URL:http://localhost:8083}
+  # Load example stock for each country.
+  seed-data: ${INVENTORY_SEED_DATA:true}
+  # A provisional hold that is not confirmed within this time is released.
+  hold-time-limit: PT2M
+  # How often expired provisional holds are released.
+  hold-expiry-check: PT30S
+
+car-rental:
+  # Events go through the outbox table, in the transaction of the change they describe.
+  outbox:
+    enabled: true
+    table: public.outbox

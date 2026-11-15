@@ -1,0 +1,143 @@
+openapi: 3.1.0
+info:
+  title: Customer Service
+  version: 0.1.0
+  description: |
+    The driver profile of the signed-in customer: the date of birth and the country that issued
+    the driving licence. Name and email stay in Keycloak.
+
+    Every request to `/api/v1/profile` needs an access token with the role `customer`. The customer
+    is the subject of the token, so a customer reaches only their own profile. Other services, with
+    the role `service`, read a customer's profile by the customer's ID.
+
+    Every response carries an `X-Correlation-Id` header. A caller may send its own.
+servers:
+  - url: /
+security:
+  - bearer: []
+tags:
+  - name: profile
+    description: The driver profile of the signed-in customer
+  - name: services
+    description: Profiles for other services
+
+paths:
+  /api/v1/profile:
+    get:
+      tags: [profile]
+      summary: Read the driver profile
+      responses:
+        "200":
+          description: The profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          description: The customer has not entered a profile yet (`/problems/profile-not-found`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags: [profile]
+      summary: Enter or change the driver profile
+      description: |
+        The driver must be 18 to 120 years old today. Whether the driver is old enough to rent is
+        checked for each rental on its start date.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Profile"
+      responses:
+        "200":
+          description: The saved profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: The profile breaks a rule (`/problems/invalid-profile`) or is malformed
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+
+  /api/v1/profiles/{customerId}:
+    get:
+      tags: [services]
+      summary: Read a customer's driver profile
+      description: Only for other services, which act for the customer, such as the pricing service.
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          description: The ID of the user in Keycloak, the subject of the customer's token
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          description: The customer has not entered a profile yet (`/problems/profile-not-found`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Problem:
+      description: No valid token (401) or not a customer (403)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Profile:
+      type: object
+      required: [dateOfBirth, licenceCountry]
+      properties:
+        dateOfBirth:
+          type: string
+          format: date
+          examples: ["1990-05-17"]
+        licenceCountry:
+          type: string
+          description: ISO 3166-1 alpha-2 code of the country that issued the driving licence, in lower case
+          pattern: "^[a-z]{2}$"
+          examples: ["pl"]
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

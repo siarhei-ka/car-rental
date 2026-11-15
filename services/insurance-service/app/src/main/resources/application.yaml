@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: insurance-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/insurance}
+    username: ${DB_USER:insurance}
+    password: ${DB_PASSWORD}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+insurance:
+  # Where the list of countries and their currencies is loaded from at startup.
+  administration-url: ${ADMINISTRATION_URL:http://localhost:8083}
+  # The insurance provider, a mock in this project, and the key it expects.
+  provider-url: ${INSURANCE_PROVIDER_URL:http://localhost:8094}
+  provider-api-key: ${INSURANCE_PROVIDER_API_KEY:}
+  # No price is invented when the provider does not answer in time.
+  provider-timeout: PT2S

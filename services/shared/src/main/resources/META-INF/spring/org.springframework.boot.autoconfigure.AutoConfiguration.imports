@@ -1,0 +1,4 @@
+psn.car.rental.shared.SharedWebAutoConfiguration
+psn.car.rental.shared.security.ServiceSecurityAutoConfiguration
+psn.car.rental.shared.security.ServiceTokenAutoConfiguration
+psn.car.rental.shared.events.EventsAutoConfiguration

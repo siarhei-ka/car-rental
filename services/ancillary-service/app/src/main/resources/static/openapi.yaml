@@ -1,0 +1,256 @@
+openapi: 3.1.0
+info:
+  title: Ancillary Service
+  version: 0.1.0
+  description: |
+    The extras of each country, such as a child seat or road toll payment, with their prices, and
+    the fixed fee for returning the car to another location of the country. Prices are in the
+    currency of the country. Extras are never deleted, only switched off, and their number is not
+    limited by any stock.
+
+    Every request names its country in the `X-Country` header and needs an access token. The extras
+    on offer and the one-way fee are open to every valid token, including the customer gateway's
+    token for a visitor. The admin paths are for administrators of the country.
+
+    Amounts are decimal strings with as many fraction digits as the currency has minor units.
+
+    Every response carries an `X-Correlation-Id` header. A caller may send its own.
+servers:
+  - url: /
+security:
+  - bearer: []
+tags:
+  - name: list-prices
+    description: Public extras and one-way fee
+  - name: admin
+    description: Extras and the one-way fee, for administrators of the country
+
+paths:
+  /api/v1/extras:
+    get:
+      tags: [list-prices]
+      summary: List the extras on offer
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      responses:
+        "200":
+          description: The extras that are switched on, ordered by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Extra"
+        "400":
+          $ref: "#/components/responses/Problem"
+
+  /api/v1/one-way-fee:
+    get:
+      tags: [list-prices]
+      summary: Read the one-way fee
+      description: Added to a rental whose return location differs from its pick-up location.
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      responses:
+        "200":
+          description: The fee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Money"
+        "404":
+          description: No fee is set for the country (`/problems/one-way-fee-not-set`)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /api/v1/admin/extras:
+    get:
+      tags: [admin]
+      summary: List all extras, also those switched off
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      responses:
+        "200":
+          description: The extras, ordered by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Extra"
+
+  /api/v1/admin/extras/{code}:
+    put:
+      tags: [admin]
+      summary: Create or change an extra
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - name: code
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/Code"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtraRequest"
+      responses:
+        "200":
+          description: The saved extra
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Extra"
+        "400":
+          $ref: "#/components/responses/Problem"
+
+  /api/v1/admin/one-way-fee:
+    get:
+      tags: [admin]
+      summary: Read the one-way fee
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      responses:
+        "200":
+          description: The fee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Money"
+        "404":
+          description: No fee is set for the country
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags: [admin]
+      summary: Set the one-way fee
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  $ref: "#/components/schemas/Amount"
+      responses:
+        "200":
+          description: The saved fee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Money"
+        "400":
+          $ref: "#/components/responses/Problem"
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Country:
+      name: X-Country
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-z]{2}$"
+        examples: ["pl"]
+  responses:
+    Problem:
+      description: An invalid request or price (`/problems/invalid-price`, `/problems/unknown-country`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Code:
+      type: string
+      pattern: "^[A-Z][A-Z0-9_]{0,31}$"
+      examples: ["CHILD_SEAT"]
+    Amount:
+      type: string
+      description: A decimal amount in the currency of the country, not negative
+      examples: ["25.00"]
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          $ref: "#/components/schemas/Amount"
+        currency:
+          type: string
+          description: ISO 4217 code
+          examples: ["PLN"]
+    Kind:
+      type: string
+      enum: [EQUIPMENT, SERVICE]
+      description: Equipment fitted to the car, or a service such as road toll payment
+    Charge:
+      type: string
+      enum: [PER_DAY, PER_RENTAL]
+      description: Whether the price is for each day or for the whole rental
+    Extra:
+      type: object
+      required: [code, name, kind, charge, price, maxQuantity, active]
+      properties:
+        code:
+          $ref: "#/components/schemas/Code"
+        name:
+          type: string
+        kind:
+          $ref: "#/components/schemas/Kind"
+        charge:
+          $ref: "#/components/schemas/Charge"
+        price:
+          $ref: "#/components/schemas/Money"
+        maxQuantity:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: How many of this extra one reservation can have
+        active:
+          type: boolean
+          description: Whether the extra is offered
+    ExtraRequest:
+      type: object
+      required: [name, kind, charge, price, maxQuantity, active]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        kind:
+          $ref: "#/components/schemas/Kind"
+        charge:
+          $ref: "#/components/schemas/Charge"
+        price:
+          $ref: "#/components/schemas/Amount"
+        maxQuantity:
+          type: integer
+          minimum: 1
+          maximum: 10
+        active:
+          type: boolean
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

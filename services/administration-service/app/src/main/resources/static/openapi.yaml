@@ -1,0 +1,382 @@
+openapi: 3.1.0
+info:
+  title: Administration Service
+  version: 0.1.0
+  description: |
+    Owns reference data: countries with their currencies, car types, car classes and locations.
+
+    Countries, car types and car classes are shared by all countries. Locations belong to one
+    country, which a request names in the `X-Country` header.
+
+    Every change is published as an event on the Kafka topic `reference-data`. The event carries
+    the changed data:
+
+    ```json
+    {"eventId": "…", "kind": "LOCATION", "action": "SAVED", "occurredAt": "…",
+     "country": "pl", "data": {"id": "waw-airport", "…": "…"}}
+    ```
+
+    `kind` is one of `COUNTRY`, `CAR_TYPE`, `CAR_CLASS` and `LOCATION`. The Kafka key is
+    `country:<code>`, `car-type:<code>`, `car-class:<code>` or `location:<country>:<id>`, so all
+    events of one item keep their order.
+
+    Every response carries an `X-Correlation-Id` header. A caller may send its own.
+servers:
+  - url: /
+tags:
+  - name: admin
+    description: Administration of reference data
+  - name: reference-data
+    description: All reference data at once, for services that load a copy
+
+paths:
+  /api/v1/admin/countries:
+    get:
+      tags: [admin]
+      summary: List countries
+      responses:
+        "200":
+          description: Countries, ordered by code
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Country"
+
+  /api/v1/admin/countries/{code}:
+    put:
+      tags: [admin]
+      summary: Create or change a country
+      description: A new country gets its own database schema for its locations.
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/CountryCode"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, currency, active]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                currency:
+                  type: string
+                  description: ISO 4217 code
+                  examples: [PLN, EUR]
+                active:
+                  type: boolean
+      responses:
+        "201":
+          description: The country was created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Country"
+        "200":
+          description: The country was changed, or was already as requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Country"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/admin/car-types:
+    get:
+      tags: [admin]
+      summary: List car types
+      responses:
+        "200":
+          description: Car types, ordered by code
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Named"
+
+  /api/v1/admin/car-types/{code}:
+    put:
+      tags: [admin]
+      summary: Create or change a car type
+      parameters:
+        - $ref: "#/components/parameters/Code"
+      requestBody:
+        $ref: "#/components/requestBodies/Named"
+      responses:
+        "201":
+          $ref: "#/components/responses/NamedSaved"
+        "200":
+          $ref: "#/components/responses/NamedSaved"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/admin/car-classes:
+    get:
+      tags: [admin]
+      summary: List car classes
+      responses:
+        "200":
+          description: Car classes, ordered by code
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Named"
+
+  /api/v1/admin/car-classes/{code}:
+    put:
+      tags: [admin]
+      summary: Create or change a car class
+      parameters:
+        - $ref: "#/components/parameters/Code"
+      requestBody:
+        $ref: "#/components/requestBodies/Named"
+      responses:
+        "201":
+          $ref: "#/components/responses/NamedSaved"
+        "200":
+          $ref: "#/components/responses/NamedSaved"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/admin/locations:
+    get:
+      tags: [admin]
+      summary: List the locations of a country
+      parameters:
+        - $ref: "#/components/parameters/Country"
+      responses:
+        "200":
+          description: Locations, ordered by ID
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Location"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/admin/locations/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Country"
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Id"
+    get:
+      tags: [admin]
+      summary: Read a location
+      responses:
+        "200":
+          description: The location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: The location does not exist
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    put:
+      tags: [admin]
+      summary: Create or change a location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, city, latitude, longitude, timeZone, active]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                city:
+                  type: string
+                  maxLength: 100
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                timeZone:
+                  type: string
+                  description: A region time zone
+                  examples: [Europe/Warsaw]
+                active:
+                  type: boolean
+      responses:
+        "201":
+          description: The location was created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "200":
+          description: The location was changed, or was already as requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/reference-data:
+    get:
+      tags: [reference-data]
+      summary: All reference data
+      responses:
+        "200":
+          description: Countries, car types, car classes and the locations of all countries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [countries, carTypes, carClasses, locations]
+                properties:
+                  countries:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Country"
+                  carTypes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Named"
+                  carClasses:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Named"
+                  locations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Location"
+
+components:
+  parameters:
+    Country:
+      name: X-Country
+      in: header
+      required: true
+      description: The country of the locations
+      schema:
+        $ref: "#/components/schemas/CountryCode"
+    Code:
+      name: code
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Code"
+
+  requestBodies:
+    Named:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [name, active]
+            properties:
+              name:
+                type: string
+                maxLength: 100
+              active:
+                type: boolean
+
+  responses:
+    NamedSaved:
+      description: The saved item. 201 when it was created
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Named"
+    BadRequest:
+      description: |
+        `/problems/invalid-reference-data`: a value breaks a rule, for example an unknown currency
+        or time zone. `/problems/unknown-country`: the country is missing or does not exist.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    CountryCode:
+      type: string
+      pattern: "^[a-z]{2}$"
+    Id:
+      type: string
+      pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    Code:
+      type: string
+      pattern: "^[A-Z][A-Z0-9_]{0,31}$"
+    Country:
+      type: object
+      required: [code, name, currency, active]
+      properties:
+        code:
+          $ref: "#/components/schemas/CountryCode"
+        name:
+          type: string
+        currency:
+          type: string
+        active:
+          type: boolean
+    Named:
+      type: object
+      required: [code, name, active]
+      properties:
+        code:
+          $ref: "#/components/schemas/Code"
+        name:
+          type: string
+        active:
+          type: boolean
+    Location:
+      type: object
+      required: [id, country, name, city, latitude, longitude, timeZone, active]
+      properties:
+        id:
+          $ref: "#/components/schemas/Id"
+        country:
+          $ref: "#/components/schemas/CountryCode"
+        name:
+          type: string
+        city:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        timeZone:
+          type: string
+        active:
+          type: boolean
+    Problem:
+      type: object
+      description: Problem Details (RFC 9457)
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

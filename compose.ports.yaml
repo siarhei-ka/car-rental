@@ -1,0 +1,29 @@
+# Publishes the ports of the services on the development machine, for debugging only:
+#   docker compose -f compose.yaml -f compose.ports.yaml up -d
+# Every call still needs a valid access token. Normally only the UIs, the gateways and Keycloak
+# can be reached from outside Docker.
+services:
+  inventory-service:
+    ports: ["8081:8080"]
+  reservation-service:
+    ports: ["8082:8080"]
+  administration-service:
+    ports: ["8083:8080"]
+  location-info-service:
+    ports: ["8084:8080"]
+  car-type-info-service:
+    ports: ["8085:8080"]
+  search-service:
+    ports: ["8086:8080"]
+  customer-service:
+    ports: ["8089:8080"]
+  pricing-service:
+    ports: ["8091:8080"]
+  ancillary-service:
+    ports: ["8092:8080"]
+  insurance-service:
+    ports: ["8093:8080"]
+  insurance-provider-mock:
+    ports: ["8094:8080"]
+  discount-service:
+    ports: ["8095:8080"]

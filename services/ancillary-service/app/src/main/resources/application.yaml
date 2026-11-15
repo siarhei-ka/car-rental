@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: ancillary-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ancillary}
+    username: ${DB_USER:ancillary}
+    password: ${DB_PASSWORD}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+ancillary:
+  # Where the list of countries and their currencies is loaded from at startup. Each country is a
+  # tenant with its own schema.
+  administration-url: ${ADMINISTRATION_URL:http://localhost:8083}
+  # Load example data for each country.
+  seed-data: ${ANCILLARY_SEED_DATA:true}
+
+car-rental:
+  # Events go through the outbox table, in the transaction of the change they describe.
+  outbox:
+    enabled: true
+    table: public.outbox

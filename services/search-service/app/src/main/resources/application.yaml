@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: search-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      properties:
+        # A search never waits for Kafka: an event that cannot be sent soon is dropped.
+        max.block.ms: 2000
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+search:
+  location-info-url: ${LOCATION_INFO_URL:http://localhost:8084}
+  car-type-info-url: ${CAR_TYPE_INFO_URL:http://localhost:8085}
+  inventory-url: ${INVENTORY_URL:http://localhost:8081}
+  pricing-url: ${PRICING_URL:http://localhost:8091}
+  # The longest rental, the same limit as the reservation service.
+  max-days: 30
+  timeout: PT2S
+
+car-rental:
+  # The search has no database: analytics events go straight to Kafka, without waiting.
+  analytics:
+    direct: true

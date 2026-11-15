@@ -1,0 +1,139 @@
+openapi: 3.1.0
+info:
+  title: Location Info Service
+  version: 0.1.0
+  description: |
+    Serves countries and locations to anyone, from Redis only. The cache updater keeps Redis up to
+    date from the administration service. Lists contain only active items.
+
+    If the reference data is not loaded yet or Redis cannot be reached, the answer is 503 with the
+    problem type `/problems/reference-data-unavailable`.
+servers:
+  - url: /
+paths:
+  /api/v1/countries:
+    get:
+      summary: Active countries, ordered by code
+      responses:
+        "200":
+          description: Countries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Country"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/locations:
+    get:
+      summary: Active locations of one country, or of all active countries
+      parameters:
+        - name: country
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: "^[a-z]{2}$"
+      responses:
+        "200":
+          description: Locations, ordered by country and ID
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Location"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/locations/{country}/{id}:
+    get:
+      summary: One location, also when it is not active
+      parameters:
+        - name: country
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z]{2}$"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "404":
+          description: The location does not exist
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+components:
+  responses:
+    BadRequest:
+      description: The request is invalid
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Unavailable:
+      description: Reference data is not loaded yet, or Redis cannot be reached
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Country:
+      type: object
+      required: [code, name, currency, active]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        currency:
+          type: string
+        active:
+          type: boolean
+    Location:
+      type: object
+      required: [id, country, name, city, latitude, longitude, timeZone, active]
+      properties:
+        id:
+          type: string
+        country:
+          type: string
+        name:
+          type: string
+        city:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        timeZone:
+          type: string
+        active:
+          type: boolean
+    Problem:
+      type: object
+      description: Problem Details (RFC 9457)
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

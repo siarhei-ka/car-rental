@@ -1,0 +1,467 @@
+openapi: 3.1.0
+info:
+  title: Reservation Service
+  version: 0.1.0
+  description: |
+    Owns reservations and their life cycle. A reservation holds one car through the inventory
+    service, and keeps the insurance option, the extras and the price it was made with. The price
+    is calculated by the pricing service when the reservation is made; a price sent by a browser
+    is never used. Payment is made at pick-up.
+
+    Every request names its country in the `X-Country` header. A country is a tenant.
+
+    Every request needs an access token. Reservations are for the role `customer`: the customer is
+    the subject of the token, and a customer reads and cancels only their own reservations. Another
+    customer's reservation is answered with 404. The admin paths are for administrators.
+
+    Every response carries an `X-Correlation-Id` header. A caller may send its own.
+servers:
+  - url: /
+tags:
+  - name: reservations
+    description: Reservations, for customers
+  - name: admin
+    description: The reservations of a country, with pick-ups, returns and no-shows, for staff
+
+paths:
+  /api/v1/reservations:
+    get:
+      tags: [reservations]
+      summary: List the customer's own reservations
+      description: The reservations of the signed-in customer in every country, latest start first.
+      responses:
+        "200":
+          description: The reservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reservation"
+    post:
+      tags: [reservations]
+      summary: Create a reservation
+      description: |
+        Checks the rules, asks the pricing service for the price for the customer, holds a car and
+        stores the reservation with its price. The request carries the total the customer saw: when
+        the price calculated now differs, nothing is reserved and the answer is 409
+        `/problems/price-changed` with the new price, which the customer confirms with a new
+        request.
+
+        A request repeated with the same `Idempotency-Key` returns the first result with status 200
+        and creates nothing new. The same key with a different request is rejected. Idempotency
+        keys are kept per customer.
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9._-]{8,128}$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReservationRequest"
+      responses:
+        "201":
+          description: The reservation was created
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "200":
+          description: The same request had already created this reservation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: |
+            `/problems/price-changed`: the price is no longer the total the customer saw. The
+            problem has a `price` property with the new price.
+            `/problems/no-car-available`, `/problems/conflicting-request`,
+            `/problems/profile-required`: see the other conflicts.
+          content:
+            application/problem+json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Problem"
+                  - type: object
+                    properties:
+                      price:
+                        $ref: "#/components/schemas/Price"
+        "422":
+          description: |
+            The pricing service refused the rental, for example `/problems/driver-too-young` or
+            `/problems/car-not-offered`. Its answer is passed on unchanged.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+
+  /api/v1/reservations/{id}:
+    get:
+      tags: [reservations]
+      summary: Read a reservation
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200":
+          description: The reservation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/reservations/{id}/cancel:
+    post:
+      tags: [reservations]
+      summary: Cancel a reservation before its start
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200":
+          $ref: "#/components/responses/Changed"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/admin/reservations:
+    get:
+      tags: [admin]
+      summary: List reservations, ordered by start
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - name: locationId
+          in: query
+          required: false
+          description: Only reservations picked up at this location
+          schema:
+            $ref: "#/components/schemas/Id"
+      responses:
+        "200":
+          description: The reservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reservation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/admin/reservations/{id}/pick-up:
+    post:
+      tags: [admin]
+      summary: Register that the car was handed over
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200":
+          $ref: "#/components/responses/Changed"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/admin/reservations/{id}/return:
+    post:
+      tags: [admin]
+      summary: Register that the car is back
+      description: For a one-way rental the car joins the stock of the return location.
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200":
+          $ref: "#/components/responses/Changed"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/admin/reservations/{id}/no-show:
+    post:
+      tags: [admin]
+      summary: Register that the customer did not come
+      description: Possible from the start onward. The car is released.
+      parameters:
+        - $ref: "#/components/parameters/Country"
+        - $ref: "#/components/parameters/ReservationId"
+      responses:
+        "200":
+          $ref: "#/components/responses/Changed"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+components:
+  parameters:
+    Country:
+      name: X-Country
+      in: header
+      required: true
+      description: The country of the request, as two lowercase letters
+      schema:
+        type: string
+        pattern: "^[a-z]{2}$"
+    ReservationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Changed:
+      description: |
+        The state changed. If `inventoryUpToDate` is false, the inventory service will be told
+        later.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Reservation"
+    BadRequest:
+      description: |
+        `/problems/invalid-reservation`: a rule is broken, for example the start is in the past or
+        the rental is longer than 30 days. Also returned for an invalid request or a missing or
+        unknown country.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: The reservation does not exist in this country
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Conflict:
+      description: |
+        `/problems/no-car-available`: no car is free for the whole rental.
+        `/problems/conflicting-request`: the idempotency key was used for a different request.
+        `/problems/invalid-state`: the reservation is in a state that does not allow the change.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    InventoryUnavailable:
+      description: |
+        `/problems/inventory-unavailable` or `/problems/price-unavailable`: the inventory or the
+        pricing service did not answer in time. Nothing was reserved. The request can be repeated
+        with the same idempotency key.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    Id:
+      type: string
+      pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    Code:
+      type: string
+      pattern: "^[A-Z][A-Z0-9_]{0,31}$"
+      examples: [SEDAN, SUV, VAN, ECONOMY]
+    ReservationRequest:
+      type: object
+      required:
+        [pickUpLocationId, returnLocationId, carType, carClass, start, days, insurance, expectedTotal]
+      properties:
+        pickUpLocationId:
+          $ref: "#/components/schemas/Id"
+        returnLocationId:
+          $ref: "#/components/schemas/Id"
+        carType:
+          $ref: "#/components/schemas/Code"
+        carClass:
+          $ref: "#/components/schemas/Code"
+        start:
+          type: string
+          format: date-time
+          description: Must be in the future
+        days:
+          type: integer
+          minimum: 1
+          maximum: 30
+        insurance:
+          $ref: "#/components/schemas/Code"
+          description: The code of the insurance option
+        extras:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/Extra"
+        expectedTotal:
+          $ref: "#/components/schemas/Money"
+          description: |
+            The total the customer saw and confirmed. It is only compared with the price
+            calculated now; it is never used as the price.
+    Extra:
+      type: object
+      required: [code, quantity]
+      properties:
+        code:
+          $ref: "#/components/schemas/Code"
+        quantity:
+          type: integer
+          minimum: 1
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          description: A decimal amount, such as "149.00"
+        currency:
+          type: string
+          description: ISO 4217 code
+    Price:
+      type: object
+      description: The price a reservation was made with, in the form of a quote of the pricing service
+      required: [currency, lines, subtotal, total]
+      properties:
+        currency:
+          type: string
+        lines:
+          type: array
+          items:
+            type: object
+            required: [kind, name, quantity, unitPrice, charge, amount]
+            properties:
+              kind:
+                type: string
+                enum: [CAR_RENTAL, INSURANCE, EXTRA, ONE_WAY_FEE]
+              code:
+                type: [string, "null"]
+              name:
+                type: string
+              quantity:
+                type: integer
+              unitPrice:
+                $ref: "#/components/schemas/Money"
+              charge:
+                type: string
+                enum: [PER_DAY, PER_RENTAL]
+              amount:
+                $ref: "#/components/schemas/Money"
+        subtotal:
+          $ref: "#/components/schemas/Money"
+        discount:
+          oneOf:
+            - type: object
+              required: [name, amount]
+              properties:
+                name:
+                  type: string
+                amount:
+                  $ref: "#/components/schemas/Money"
+            - type: "null"
+        total:
+          $ref: "#/components/schemas/Money"
+          description: The amount due at pick-up
+    Reservation:
+      type: object
+      required:
+        - id
+        - country
+        - customerId
+        - pickUpLocationId
+        - returnLocationId
+        - carType
+        - carClass
+        - start
+        - days
+        - end
+        - oneWay
+        - insurance
+        - extras
+        - state
+        - paymentMethod
+        - inventoryUpToDate
+      properties:
+        id:
+          type: string
+          format: uuid
+        country:
+          type: string
+          description: The country of the reservation, which every later request about it names
+        customerId:
+          type: string
+          description: The customer who made the reservation, the user ID in Keycloak
+        pickUpLocationId:
+          $ref: "#/components/schemas/Id"
+        returnLocationId:
+          $ref: "#/components/schemas/Id"
+        carType:
+          $ref: "#/components/schemas/Code"
+        carClass:
+          $ref: "#/components/schemas/Code"
+        start:
+          type: string
+          format: date-time
+        days:
+          type: integer
+        end:
+          type: string
+          format: date-time
+          description: The first moment that is no longer part of the rental
+        oneWay:
+          type: boolean
+        insurance:
+          $ref: "#/components/schemas/Code"
+        extras:
+          type: array
+          items:
+            $ref: "#/components/schemas/Extra"
+        price:
+          oneOf:
+            - $ref: "#/components/schemas/Price"
+            - type: "null"
+          description: Null only for reservations made before prices were stored
+        state:
+          type: string
+          enum: [CONFIRMED, CANCELLED, PICKED_UP, RETURNED, NO_SHOW]
+        paymentMethod:
+          type: string
+          enum: [PAY_AT_PICK_UP]
+        inventoryUpToDate:
+          type: boolean
+          description: False while a change still has to reach the inventory service
+    Problem:
+      type: object
+      description: Problem Details (RFC 9457)
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string

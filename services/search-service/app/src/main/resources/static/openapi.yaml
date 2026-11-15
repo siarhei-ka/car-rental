@@ -1,0 +1,163 @@
+openapi: 3.1.0
+info:
+  title: Search Service
+  version: 0.1.0
+  description: |
+    Finds the car types and classes a visitor can choose at a location for a period. It asks the
+    location and car type info services, the inventory service and the pricing service, and stores
+    nothing. Each offer carries the daily list price at the pick-up location. A car without a daily
+    rate cannot be priced, so it is not offered.
+
+    Every request names its country in the `X-Country` header.
+servers:
+  - url: /
+paths:
+  /api/v1/search:
+    get:
+      summary: Search for available cars
+      parameters:
+        - name: X-Country
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z]{2}$"
+        - name: pickUpLocationId
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/Id"
+        - name: returnLocationId
+          in: query
+          required: false
+          description: Defaults to the pick-up location. Must be in the same country.
+          schema:
+            $ref: "#/components/schemas/Id"
+        - name: start
+          in: query
+          required: true
+          description: Must be in the future
+          schema:
+            type: string
+            format: date-time
+        - name: days
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 30
+        - name: carType
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Code"
+        - name: carClass
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Code"
+      responses:
+        "200":
+          description: The offers, ordered by car type and class name. Only cars that are free are listed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"
+        "400":
+          description: |
+            `/problems/invalid-search`: a rule is broken, for example the start is in the past, a
+            location does not exist or is not open, or the return location is in another country.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          description: "`/problems/search-unavailable`: a service the search depends on did not answer"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  schemas:
+    Id:
+      type: string
+      pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    Code:
+      type: string
+      pattern: "^[A-Z][A-Z0-9_]{0,31}$"
+    Location:
+      type: object
+      required: [id, country, name, timeZone, active]
+      properties:
+        id:
+          type: string
+        country:
+          type: string
+        name:
+          type: string
+        timeZone:
+          type: string
+        active:
+          type: boolean
+    Offer:
+      type: object
+      required: [carType, carTypeName, carClass, carClassName, availableCars, dailyRate]
+      properties:
+        carType:
+          type: string
+        carTypeName:
+          type: string
+        carClass:
+          type: string
+        carClassName:
+          type: string
+        availableCars:
+          type: integer
+          minimum: 1
+        dailyRate:
+          $ref: "#/components/schemas/Price"
+    Price:
+      type: object
+      description: A list price in the currency of the country
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          description: A decimal amount, such as "149.00"
+        currency:
+          type: string
+          description: ISO 4217 code
+    SearchResult:
+      type: object
+      required: [pickUpLocation, returnLocation, start, days, end, offers]
+      properties:
+        pickUpLocation:
+          $ref: "#/components/schemas/Location"
+        returnLocation:
+          $ref: "#/components/schemas/Location"
+        start:
+          type: string
+          format: date-time
+        days:
+          type: integer
+        end:
+          type: string
+          format: date-time
+          description: The first moment that is no longer part of the rental
+        offers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Offer"
+    Problem:
+      type: object
+      description: Problem Details (RFC 9457)
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

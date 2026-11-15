@@ -1,0 +1,38 @@
+name: Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - "pom.xml"
+      - "mvnw"
+      - ".mvn/**"
+      - "infra/keycloak/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "services/**"
+      - "pom.xml"
+      - "mvnw"
+      - ".mvn/**"
+      - "infra/keycloak/**"
+      - ".github/workflows/backend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: Build, test, check coverage and formatting
+        run: ./mvnw --batch-mode --no-transfer-progress verify

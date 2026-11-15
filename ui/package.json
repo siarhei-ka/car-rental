@@ -1,0 +1,55 @@
+{
+  "name": "car-rental-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "generate": "openapi-typescript ../services/info-services/location/src/main/resources/static/openapi.yaml -o src/api/generated/location.ts && openapi-typescript ../services/info-services/car-type/src/main/resources/static/openapi.yaml -o src/api/generated/car-type.ts && openapi-typescript ../services/search-service/app/src/main/resources/static/openapi.yaml -o src/api/generated/search.ts && openapi-typescript ../services/api-gateway/src/main/resources/static/openapi.yaml -o src/api/generated/gateway.ts && openapi-typescript ../services/customer-service/app/src/main/resources/static/openapi.yaml -o src/api/generated/customer.ts && openapi-typescript ../services/insurance-service/app/src/main/resources/static/openapi.yaml -o src/api/generated/insurance.ts && openapi-typescript ../services/ancillary-service/app/src/main/resources/static/openapi.yaml -o src/api/generated/ancillary.ts && openapi-typescript ../services/pricing-service/app/src/main/resources/static/openapi.yaml -o src/api/generated/pricing.ts && openapi-typescript ../services/reservation-service/app/src/main/resources/static/openapi.yaml -o src/api/generated/reservation.ts && prettier --write src/api/generated",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@fontsource-variable/inter": "5.3.0",
+    "@mui/icons-material": "9.5.0",
+    "@mui/material": "9.5.0",
+    "@mui/x-date-pickers": "9.17.0",
+    "@tanstack/react-query": "5.107.1",
+    "dayjs": "1.11.23",
+    "openapi-fetch": "0.17.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router": "8.5.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.9",
+    "@types/node": "24.19.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "^16.0.0",
+    "jsdom": "31.0.0",
+    "openapi-typescript": "7.13.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.2",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

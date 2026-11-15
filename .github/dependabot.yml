@@ -1,0 +1,46 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+    ignore:
+      # The gateway stays on the Spring Boot line that the released Spring Cloud supports, and the
+      # services follow the newest line. Moving to a new line is done by hand for both.
+      - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directories:
+      - "/services/inventory-service/app"
+      - "/services/reservation-service/app"
+      - "/services/administration-service/app"
+      - "/services/search-service/app"
+      - "/services/cache-updater"
+      - "/services/info-services/location"
+      - "/services/info-services/car-type"
+      - "/services/customer-service/app"
+      - "/services/pricing-service/app"
+      - "/services/ancillary-service/app"
+      - "/services/insurance-service/app"
+      - "/services/insurance-provider-mock"
+      - "/services/discount-service/app"
+      - "/services/api-gateway"
+      - "/admin-ui"
+      - "/ui"
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker-compose
+    directory: "/"
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directories:
+      - "/admin-ui"
+      - "/ui"
+      - "/e2e"
+    schedule:
+      interval: weekly

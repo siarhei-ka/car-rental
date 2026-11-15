@@ -1,0 +1,28 @@
+# The gateway of the customer UI.
+spring:
+  session:
+    redis:
+      namespace: car-rental:gateway:session
+
+server:
+  servlet:
+    session:
+      cookie:
+        # Cookies do not tell ports apart, so the two gateways use different names on localhost.
+        name: CAR_RENTAL_SESSION
+
+gateway:
+  keycloak:
+    client-id: customer-ui
+  csrf-cookie: XSRF-TOKEN
+  # Only the customer UI may call this gateway from a browser.
+  allowed-origins: ${CUSTOMER_UI_URL:http://localhost:8080}
+  services:
+    location-info: ${LOCATION_INFO_URL:http://localhost:8084}
+    car-type-info: ${CAR_TYPE_INFO_URL:http://localhost:8085}
+    search: ${SEARCH_URL:http://localhost:8086}
+    customer: ${CUSTOMER_URL:http://localhost:8089}
+    pricing: ${PRICING_URL:http://localhost:8091}
+    ancillary: ${ANCILLARY_URL:http://localhost:8092}
+    insurance: ${INSURANCE_URL:http://localhost:8093}
+    reservation: ${RESERVATION_URL:http://localhost:8082}

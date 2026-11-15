@@ -1,0 +1,53 @@
+name: Images
+
+on:
+  pull_request:
+    paths:
+      - "services/**"
+      - "admin-ui/**"
+      - "ui/**"
+      - "pom.xml"
+      - ".mvn/**"
+      - ".dockerignore"
+      - ".github/workflows/images.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.service.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        service:
+          - { name: inventory-service, path: services/inventory-service/app }
+          - { name: reservation-service, path: services/reservation-service/app }
+          - { name: administration-service, path: services/administration-service/app }
+          - { name: search-service, path: services/search-service/app }
+          - { name: cache-updater, path: services/cache-updater }
+          - { name: location-info-service, path: services/info-services/location }
+          - { name: car-type-info-service, path: services/info-services/car-type }
+          - { name: customer-service, path: services/customer-service/app }
+          - { name: pricing-service, path: services/pricing-service/app }
+          - { name: ancillary-service, path: services/ancillary-service/app }
+          - { name: insurance-service, path: services/insurance-service/app }
+          - { name: insurance-provider-mock, path: services/insurance-provider-mock }
+          - { name: discount-service, path: services/discount-service/app }
+          - { name: api-gateway, path: services/api-gateway }
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the image
+        run: docker build -f ${{ matrix.service.path }}/Dockerfile -t ${{ matrix.service.name }}:ci .
+  frontend:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        app: [admin-ui, ui]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the image
+        run: docker build -t ${{ matrix.app }}:ci ${{ matrix.app }}

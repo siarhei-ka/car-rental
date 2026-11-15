@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 44 640 264">
+  <defs>
+    <linearGradient id="paint-suv-economy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb37a"/><stop offset="0.45" stop-color="#f47a2a"/><stop offset="1" stop-color="#b4501a"/></linearGradient>
+    <linearGradient id="glass-suv-economy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b7187"/><stop offset="0.55" stop-color="#26323f"/><stop offset="1" stop-color="#161d26"/></linearGradient>
+    <radialGradient id="rim-suv-economy"><stop offset="0" stop-color="#3a3f47"/><stop offset="1" stop-color="#8a929d"/></radialGradient>
+    <radialGradient id="shadow-suv-economy"><stop offset="0" stop-color="#0b1220" stop-opacity="0.35"/><stop offset="1" stop-color="#0b1220" stop-opacity="0"/></radialGradient>
+    <clipPath id="glass-clip-suv-economy"><path d="M76 150 L80 124 Q82 116 92 116 L388 112 C408 114 432 136 452 150 Z"/></clipPath>
+  </defs>
+  <ellipse cx="324" cy="280" rx="300" ry="14" fill="url(#shadow-suv-economy)"/>
+  <rect x="110" y="96" width="270" height="7" rx="3.5" fill="#22262c"/>
+  <path d="M93 240 A57 57 0 0 1 207 240 Z" fill="#14171b"/>
+  <path d="M433 240 A57 57 0 0 1 547 240 Z" fill="#14171b"/>
+  <path d="M56 238 L48 196 L52 128 Q56 108 80 106 L392 102 C418 104 446 132 470 150 L574 162 Q596 166 598 190 L600 224 Q600 238 586 238 L548 238 A58 58 0 0 0 432 238 L208 238 A58 58 0 0 0 92 238 Z" fill="url(#paint-suv-economy)"/>
+  <path d="M90 238 A60 60 0 0 1 210 238" fill="none" stroke="#25292f" stroke-width="9"/>
+  <path d="M430 238 A60 60 0 0 1 550 238" fill="none" stroke="#25292f" stroke-width="9"/>
+  <rect x="208" y="222" width="224" height="16" fill="#b4501a" opacity="0.55"/>
+  <path d="M76 150 L80 124 Q82 116 92 116 L388 112 C408 114 432 136 452 150 Z" fill="url(#glass-suv-economy)"/>
+  <rect x="184" y="60" width="14" height="110" fill="#b4501a" clip-path="url(#glass-clip-suv-economy)"/>
+  <rect x="316" y="60" width="12" height="110" fill="#b4501a" clip-path="url(#glass-clip-suv-economy)"/>
+  <path clip-path="url(#glass-clip-suv-economy)" d="M300 102 L330 102 L282 152 L270 152 Z" fill="#ffffff" opacity="0.10"/>
+  <path d="M76 150 L80 124 Q82 116 92 116 L388 112 C408 114 432 136 452 150 Z" fill="none" stroke="#2b3036" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M60 168 L470 160 L590 176" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2.5"/>
+  <path d="M328 152 L332 234" fill="none" stroke="#b4501a" stroke-opacity="0.8" stroke-width="2"/>
+  <path d="M456 152 Q448 196 444 234" fill="none" stroke="#b4501a" stroke-opacity="0.8" stroke-width="2"/>
+  <path d="M200 152 Q206 196 206 234" fill="none" stroke="#b4501a" stroke-opacity="0.8" stroke-width="2"/>
+  <rect x="290" y="168" width="26" height="6" rx="3" fill="#b4501a"/>
+  <rect x="410" y="166" width="26" height="6" rx="3" fill="#b4501a"/>
+  <path d="M574 170 Q594 172 597 186 L570 184 Z" fill="#fff4d6" stroke="#9aa3ad" stroke-width="1.5"/>
+  <path d="M50 140 L62 138 L62 172 L50 174 Z" fill="#d22f3c"/>
+  <g>
+    <circle cx="150" cy="238" r="42" fill="#1b1d21"/>
+    <circle cx="150" cy="238" r="39" fill="none" stroke="#2c3036" stroke-width="2"/>
+    <circle cx="150" cy="238" r="24" fill="url(#rim-suv-economy)"/>
+    <circle cx="150" cy="238" r="18" fill="#c9ced6" stroke="#9aa1ab" stroke-width="2"/>
+    <circle cx="150" cy="225" r="2.6" fill="#7d8590" transform="rotate(0 150 238)"/>
+    <circle cx="150" cy="225" r="2.6" fill="#7d8590" transform="rotate(60 150 238)"/>
+    <circle cx="150" cy="225" r="2.6" fill="#7d8590" transform="rotate(120 150 238)"/>
+    <circle cx="150" cy="225" r="2.6" fill="#7d8590" transform="rotate(180 150 238)"/>
+    <circle cx="150" cy="225" r="2.6" fill="#7d8590" transform="rotate(240 150 238)"/>
+    <circle cx="150" cy="225" r="2.6" fill="#7d8590" transform="rotate(300 150 238)"/>
+    <circle cx="150" cy="238" r="6" fill="#59616c"/>
+    <circle cx="150" cy="238" r="2.5" fill="#d0d5dc"/>
+  </g>
+  <g>
+    <circle cx="490" cy="238" r="42" fill="#1b1d21"/>
+    <circle cx="490" cy="238" r="39" fill="none" stroke="#2c3036" stroke-width="2"/>
+    <circle cx="490" cy="238" r="24" fill="url(#rim-suv-economy)"/>
+    <circle cx="490" cy="238" r="18" fill="#c9ced6" stroke="#9aa1ab" stroke-width="2"/>
+    <circle cx="490" cy="225" r="2.6" fill="#7d8590" transform="rotate(0 490 238)"/>
+    <circle cx="490" cy="225" r="2.6" fill="#7d8590" transform="rotate(60 490 238)"/>
+    <circle cx="490" cy="225" r="2.6" fill="#7d8590" transform="rotate(120 490 238)"/>
+    <circle cx="490" cy="225" r="2.6" fill="#7d8590" transform="rotate(180 490 238)"/>
+    <circle cx="490" cy="225" r="2.6" fill="#7d8590" transform="rotate(240 490 238)"/>
+    <circle cx="490" cy="225" r="2.6" fill="#7d8590" transform="rotate(300 490 238)"/>
+    <circle cx="490" cy="238" r="6" fill="#59616c"/>
+    <circle cx="490" cy="238" r="2.5" fill="#d0d5dc"/>
+  </g>
+</svg>

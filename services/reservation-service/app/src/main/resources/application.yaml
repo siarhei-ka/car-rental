@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: reservation-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/reservation}
+    username: ${DB_USER:reservation}
+    password: ${DB_PASSWORD}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+reservation:
+  # Countries to serve from the start. Usually empty: countries come from the existing schemas
+  # and from the administration service. Each country is a tenant with its own schema.
+  countries: ${RESERVATION_COUNTRIES:}
+  # Where the list of countries is loaded from at startup.
+  administration-url: ${ADMINISTRATION_URL:http://localhost:8083}
+  # The longest rental, in days.
+  max-days: 30
+  inventory-url: ${INVENTORY_URL:http://localhost:8081}
+  inventory-timeout: PT2S
+  # The pricing service calculates the price with its own calls of up to 2 seconds each.
+  pricing-url: ${PRICING_URL:http://localhost:8091}
+  pricing-timeout: PT5S
+  # A pending inventory update is retried when it has waited this long.
+  inventory-retry-after: PT30S
+  # How often pending inventory updates are looked for.
+  inventory-sync-check: PT15S
+
+car-rental:
+  # Events go through the outbox table, in the transaction of the change they describe.
+  outbox:
+    enabled: true
+    table: public.outbox

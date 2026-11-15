@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: administration-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/administration}
+    username: ${DB_USER:administration}
+    password: ${DB_PASSWORD}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+administration:
+  # Load example countries, car types, car classes and locations.
+  seed-data: ${ADMINISTRATION_SEED_DATA:true}
+  # The Kafka topic of reference data events.
+  reference-data-topic: reference-data
+
+car-rental:
+  # Events go through the outbox table, in the transaction of the change they describe.
+  outbox:
+    enabled: true
+    table: shared.outbox
+    interval: PT0.5S

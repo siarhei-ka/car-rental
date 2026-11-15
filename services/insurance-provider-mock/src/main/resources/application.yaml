@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: insurance-provider-mock
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+insurance-mock:
+  # The key every caller sends in the header X-Api-Key.
+  api-key: ${INSURANCE_PROVIDER_API_KEY:}
+  # The price per day of each product, in units of the rental currency.
+  base-prices:
+    BASIC: 10
+    FULL: 50
+  # A driver younger than this pays the young driver factor.
+  young-driver-age: 25
+  young-driver-factor: 1.5
+  # Applied when the licence country differs from the rental country.
+  foreign-licence-factor: 1.2
+  # How long each answer waits, to try out the caller's time limit.
+  delay: ${INSURANCE_PROVIDER_DELAY:PT0S}

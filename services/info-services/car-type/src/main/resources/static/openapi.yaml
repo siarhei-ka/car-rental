@@ -1,0 +1,97 @@
+openapi: 3.1.0
+info:
+  title: Car Type Info Service
+  version: 0.1.0
+  description: |
+    Serves car types and car classes to anyone, from Redis only. The cache updater keeps Redis up
+    to date from the administration service. Lists contain only active items.
+
+    If the reference data is not loaded yet or Redis cannot be reached, the answer is 503 with the
+    problem type `/problems/reference-data-unavailable`.
+servers:
+  - url: /
+paths:
+  /api/v1/car-types:
+    get:
+      summary: Active car types, ordered by code
+      responses:
+        "200":
+          description: Car types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Named"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/car-types/{code}:
+    get:
+      summary: One car type, also when it is not active
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[A-Z][A-Z0-9_]{0,31}$"
+      responses:
+        "200":
+          description: The car type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Named"
+        "404":
+          description: The car type does not exist
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/car-classes:
+    get:
+      summary: Active car classes, ordered by code
+      responses:
+        "200":
+          description: Car classes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Named"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+components:
+  responses:
+    Unavailable:
+      description: Reference data is not loaded yet, or Redis cannot be reached
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Named:
+      type: object
+      required: [code, name, active]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        active:
+          type: boolean
+    Problem:
+      type: object
+      description: Problem Details (RFC 9457)
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

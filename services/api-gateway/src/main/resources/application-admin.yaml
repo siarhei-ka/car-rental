@@ -1,0 +1,26 @@
+# The gateway of the admin UI.
+spring:
+  session:
+    redis:
+      namespace: car-rental:admin-gateway:session
+
+server:
+  servlet:
+    session:
+      cookie:
+        # Cookies do not tell ports apart, so the two gateways use different names on localhost.
+        name: CAR_RENTAL_ADMIN_SESSION
+
+gateway:
+  keycloak:
+    client-id: admin-ui
+  csrf-cookie: ADMIN-XSRF-TOKEN
+  # Only the admin UI may call this gateway from a browser.
+  allowed-origins: ${ADMIN_UI_URL:http://localhost:8090}
+  services:
+    administration: ${ADMINISTRATION_URL:http://localhost:8083}
+    inventory: ${INVENTORY_URL:http://localhost:8081}
+    pricing: ${PRICING_URL:http://localhost:8091}
+    ancillary: ${ANCILLARY_URL:http://localhost:8092}
+    discount: ${DISCOUNT_URL:http://localhost:8095}
+    reservation: ${RESERVATION_URL:http://localhost:8082}
