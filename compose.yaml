@@ -409,7 +409,7 @@ services:
   # HTTPS in front of the UIs and Keycloak, started only with the profile "https". Its certificate
   # comes from infra/https/make-certs.sh.
   https-proxy:
-    image: caddy:2.10-alpine
+    image: caddy:2.11-alpine
     profiles: [https]
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST:-localhost}
